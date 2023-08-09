@@ -1,0 +1,207 @@
+var days = '45'; // global var applied to each query_string for the encoded query search
+
+
+function set_ci_operational() {
+	
+	
+	// If a computer has a last scanned date of sooner than x days then it is deemed to be operational
+	// Set the computer ci operational status to operational and the asset state to Discovered, only if the asset state = Missing
+
+	var query_str = 'sys_class_name=cmdb_ci_computer^u_netcool_idISEMPTY^operational_status=50^u_sccm_last_scanISNOTEMPTY^u_sccm_last_scanRELATIVEGT@dayofweek@ago@' + days;
+
+	//var query_str1 = 'sys_class_name=cmdb_ci_computer^u_sccm_last_scanRELATIVEGT@dayofweek@ago@30^operational_status=50^nameINja-101exx23-d09,ki-bgr-x078-d12,be-ab-ab14-d01';
+
+	var gra = new GlideRecord('cmdb_ci_computer');
+
+	gra.addEncodedQuery(query_str);
+
+	gra.query();
+
+	//gs.log('SCCM Decommission Count set operational: ' + gra.getRowCount());
+
+	var ci_sysids = [];
+
+	while (gra.next()){
+		
+		var comments = gra.getValue('comments');
+		gs.log('SCCM Decomm: comments: ' + comments);
+		
+		var ci_sysid = gra.getValue('sys_id');
+		gs.log('SCCM Decommission cisysid : ' + ci_sysid); 
+		
+		
+		ci_sysids.push(ci_sysid);
+		
+		gra.setValue('operational_status', 1);
+		gra.setValue('install_status', 1); // install status = Absent
+		//grw.setValue('assigned_to', '');
+		
+				if (comments == null){
+				
+				//gs.log('SCCM Decomm: if');
+						gra.comments = 'Date: ' + GlideDate().getDisplayValue() + '. This record has been set back to operational from decommissioned because it has been scanned by sccm in ' + days + ' days or less';
+			}
+				
+			
+			else{ 
+				//gs.log('SCCM Decomm: else');
+				gra.comments = gra.comments + '\n'+
+				'Date: ' + GlideDate().getDisplayValue() + '. This record has been set back to operational from decommissioned because it has been scanned by sccm in ' + days + ' days or less';
+					}
+			
+		gra.update();
+		} return ci_sysids;
+} // End function
+//set_ci_operational()
+
+
+function decommission_computer(){
+	
+	// Decommission computer ci if it is Operational and last scanned date is older than x days
+	// Set the corresponding asset to, asset = Missing, substate = unreachable, only if the asset is in Discovered State. See update_asset function
+	
+	var query_string = 'sys_class_name=cmdb_ci_computer^u_netcool_idISEMPTY^operational_status!=50^u_sccm_last_scanISNOTEMPTY^u_sccm_last_scanRELATIVELT@dayofweek@ago@' + days;
+
+	//var query_string1 = 'sys_class_name=cmdb_ci_computer^u_sccm_last_scanRELATIVELT@dayofweek@ago@30^operational_status=1^sys_created_by=svc_sccm^nameINco-hea-9b5xk33,co-715-xc02-s04,he-l07-e404-m03';
+
+	
+	var ci_sysids = [];
+   
+	var grw = new GlideRecord('cmdb_ci_computer');
+
+	grw.addEncodedQuery(query_string);
+
+	grw.query();
+
+	// gs.log('SCCM Decommission Count set Decommissioned: ' + grw.getRowCount());
+
+	
+	while (grw.next()){
+		
+		var comments = grw.getValue('comments');
+		gs.log('SCCM Decomm: comments: ' + comments);
+		
+		var ci_sysid = grw.getValue('sys_id');
+		gs.log('SCCM Decommission cisysid : ' + ci_sysid); 
+		ci_sysids.push(ci_sysid);
+		
+		grw.setValue('operational_status', 50);
+		grw.setValue('install_status', 100); // install status = Absent
+		//grw.setValue('assigned_to', '');
+		
+				if (comments == null){
+				
+				//gs.log('SCCM Decomm: if');
+						grw.comments = 'Date: ' + GlideDate().getDisplayValue() + '. This record has been decommissioned because it has not been scanned by sccm in ' + days + ' days or more.';
+			}
+				
+			
+			else{ 
+				//gs.log('SCCM Decomm: else');
+				grw.comments = grw.comments + '\n'+
+				'Date: ' + GlideDate().getDisplayValue() + '. This record has been decommissioned because it has not been scanned by sccm in ' + days + ' days or more.';
+					}
+			
+		grw.update();
+		
+	} gs.log('SCCM Deommissioned: cisysids arr: ' + ci_sysids);
+	return ci_sysids;
+
+}
+
+function update_asset() {	
+	
+	// Update asset to Discovered only when the asset state is Missing
+	
+	var ci_sysids = set_ci_operational();
+	
+	for (var i=0; i < ci_sysids.length; i ++) {
+	
+		var grb = new GlideRecord('alm_hardware');
+		grb.addQuery('ci', ci_sysids[i]);
+		
+		// Set CI to operational sets Asset state to In Use. Now look for in use + cisysid and set to Discovered
+		grb.addQuery('install_status', 1);
+		grb.query();
+		
+		// gs.log('SCCM alm hardware lookup rows: ' + grb.getRowCount());
+
+		if (grb.next()){
+			
+			var asset_sysid = grb.getValue('sys_id');
+			
+			var display_name = grb.getValue('display_name');
+			gs.log('SCCM alm hardware lookup: display name: ' + display_name);
+			gs.log('SCCM alm hardware lookup: asset sysid: ' + asset_sysid);
+			gs.log('SCCM alm hardware: in while loop ');
+			
+			// Set the asset computer state back to Discovered & clear out the substate field//	
+			
+			grb.install_status = 60;
+			grb.substatus = '';
+
+			grb.update();
+			
+			}
+	}
+	
+	gs.log('SCCM alm hardware: end' );
+	
+} //update_asset();
+
+
+function update_asset_missing(){
+	
+	// Set Asset state to missing only when it is in Discovered
+	
+	var ci_sysids = decommission_computer();
+	
+	gs.log('SCCM: Asset Missing: arr length: ' + ci_sysids.length);
+	
+	for (var i=0; i < ci_sysids.length; i ++) {
+	
+		var grb = new GlideRecord('alm_hardware');
+		grb.addQuery('ci', ci_sysids[i]);
+		
+		// Only set the asset state to Missing when it is Discovered
+		grb.addQuery('install_status', 60);
+		grb.query();
+		
+		// gs.log('SCCM alm hardware lookup rows: ' + grb.getRowCount());
+
+		
+		if (grb.next()){
+			
+			var asset_sysid = grb.getValue('sys_id');
+			
+			var display_name = grb.getValue('display_name');
+			//gs.log('SCCM alm hardware lookup: display name: ' + display_name);
+			gs.log('SCCM alm hardware lookup: asset sysid: ' + asset_sysid);
+			
+			// Set the asset computer state back to Discovered & clear out the substate field//	
+			
+			grb.install_status = 8;
+			grb.substatus = 'Unreachable';
+
+			grb.update();
+			
+			}
+	}
+	
+	gs.log('SCCM alm hardware: end' );
+	
+	
+}
+
+function main(){
+		
+		// Main function to call the other functions
+	
+		update_asset();
+			// This calls set_ci_operational
+			
+		update_asset_missing(); 
+			// This calls decommission_computer();	
+			
+				
+} main();	
