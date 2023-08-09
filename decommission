@@ -3,7 +3,6 @@ var days = '45'; // global var applied to each query_string for the encoded quer
 
 function set_ci_operational() {
 	
-	
 	// If a computer has a last scanned date of sooner than x days then it is deemed to be operational
 	// Set the computer ci operational status to operational and the asset state to Discovered, only if the asset state = Missing
 
@@ -28,7 +27,6 @@ function set_ci_operational() {
 		
 		var ci_sysid = gra.getValue('sys_id');
 		gs.log('SCCM Decommission cisysid : ' + ci_sysid); 
-		
 		
 		ci_sysids.push(ci_sysid);
 		
@@ -62,9 +60,6 @@ function decommission_computer(){
 	
 	var query_string = 'sys_class_name=cmdb_ci_computer^u_netcool_idISEMPTY^operational_status!=50^u_sccm_last_scanISNOTEMPTY^u_sccm_last_scanRELATIVELT@dayofweek@ago@' + days;
 
-	//var query_string1 = 'sys_class_name=cmdb_ci_computer^u_sccm_last_scanRELATIVELT@dayofweek@ago@30^operational_status=1^sys_created_by=svc_sccm^nameINco-hea-9b5xk33,co-715-xc02-s04,he-l07-e404-m03';
-
-	
 	var ci_sysids = [];
    
 	var grw = new GlideRecord('cmdb_ci_computer');
