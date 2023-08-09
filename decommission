@@ -8,12 +8,8 @@ function set_ci_operational() {
 
 	var query_str = 'sys_class_name=cmdb_ci_computer^u_netcool_idISEMPTY^operational_status=50^u_sccm_last_scanISNOTEMPTY^u_sccm_last_scanRELATIVEGT@dayofweek@ago@' + days;
 
-	//var query_str1 = 'sys_class_name=cmdb_ci_computer^u_sccm_last_scanRELATIVEGT@dayofweek@ago@30^operational_status=50^nameINja-101exx23-d09,ki-bgr-x078-d12,be-ab-ab14-d01';
-
 	var gra = new GlideRecord('cmdb_ci_computer');
-
 	gra.addEncodedQuery(query_str);
-
 	gra.query();
 
 	//gs.log('SCCM Decommission Count set operational: ' + gra.getRowCount());
@@ -63,14 +59,11 @@ function decommission_computer(){
 	var ci_sysids = [];
    
 	var grw = new GlideRecord('cmdb_ci_computer');
-
 	grw.addEncodedQuery(query_string);
-
 	grw.query();
 
 	// gs.log('SCCM Decommission Count set Decommissioned: ' + grw.getRowCount());
 
-	
 	while (grw.next()){
 		
 		var comments = grw.getValue('comments');
@@ -177,12 +170,10 @@ function update_asset_missing(){
 			
 			grb.install_status = 8;
 			grb.substatus = 'Unreachable';
-
 			grb.update();
 			
 			}
 	}
-	
 	gs.log('SCCM alm hardware: end' );
 	
 	
