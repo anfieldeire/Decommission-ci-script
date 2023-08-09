@@ -1,3 +1,2 @@
-# Servicenow
-##Decommission-ci-script
-Servicenow script to decommission computer cis
+# Servicenow Scheduled Job
+- Servicenow script to decommission computer cis based on last scan date (from sccm)
